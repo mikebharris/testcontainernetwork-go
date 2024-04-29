@@ -1,0 +1,12 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "message": "Hello World!"
+    }
+  }
+}

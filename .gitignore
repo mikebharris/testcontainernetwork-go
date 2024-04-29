@@ -1,0 +1,7 @@
+/.idea/
+/awstestcontainers.iml
+*.zip
+coverage.*
+main
+.scannerwork
+bootstrap

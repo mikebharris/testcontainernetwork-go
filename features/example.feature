@@ -1,0 +1,6 @@
+Feature: When called, the Lambda will hit the Wiremock endpoint
+
+  Scenario: Call the endpoint
+    Given the Lambda is triggered
+    Then the Wiremock endpoint is hit
+    And the Lambda writes the message to the log
