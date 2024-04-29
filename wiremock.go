@@ -67,7 +67,7 @@ func (c *WiremockDockerContainer) StartUsing(ctx context.Context, dockerNetwork 
 	return nil
 }
 
-func (c *WiremockDockerContainer) GetAdminStatus() AdminStatus {
+func (c *WiremockDockerContainer) GetAdminStatus() WiremockAdminStatus {
 	wireMockAdminUri := fmt.Sprintf("http://localhost:%d/__admin/requests", c.MappedPort())
 	req, _ := http.NewRequest(http.MethodGet, wireMockAdminUri, nil)
 
@@ -89,25 +89,25 @@ func (c *WiremockDockerContainer) GetAdminStatus() AdminStatus {
 		log.Fatalf("reading body: %v", readErr)
 	}
 
-	var adminStatus AdminStatus
-	if err := json.Unmarshal(body, &adminStatus); err != nil {
+	var wiremockAdminStatus WiremockAdminStatus
+	if err := json.Unmarshal(body, &wiremockAdminStatus); err != nil {
 		log.Fatalf("Unmarshalling body: %v", err)
 	}
 
-	return adminStatus
+	return wiremockAdminStatus
 }
 
-type AdminStatus struct {
-	Requests               []Request `json:"requests"`
-	Meta                   Meta      `json:"meta"`
-	RequestJournalDisabled bool      `json:"requestJournalDisabled"`
+type WiremockAdminStatus struct {
+	Requests               []WiremockAdminRequest `json:"requests"`
+	Meta                   WiremockAdminMeta      `json:"meta"`
+	RequestJournalDisabled bool                   `json:"requestJournalDisabled"`
 }
 
-type Meta struct {
+type WiremockAdminMeta struct {
 	total int
 }
 
-type Request struct {
+type WiremockAdminRequest struct {
 	Id      string `json:"id"`
 	Request struct {
 		Url         string `json:"url"`

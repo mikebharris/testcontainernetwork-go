@@ -105,7 +105,7 @@ func (s *steps) theLambdaIsTriggered() {
 
 func (s *steps) theWiremockEndpointIsHit() {
 	adminStatus := s.wiremockContainer.GetAdminStatus()
-	var req Request
+	var req WiremockAdminRequest
 	for _, request := range adminStatus.Requests {
 		if request.Request.AbsoluteUrl == fmt.Sprintf("http://%s:8080/", wiremockHostname) {
 			req = request
