@@ -77,6 +77,10 @@ func (c *LambdaDockerContainer) Log() *bytes.Buffer {
 	return buf
 }
 
+func (c *LambdaDockerContainer) InvocationUrl() string {
+	return fmt.Sprintf("http://localhost:%d/2015-03-31/functions/myfunction/invocations", c.MappedPort())
+}
+
 type LambdaDockerContainerConfig struct {
 	Executable  string
 	Environment map[string]string
