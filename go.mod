@@ -1,4 +1,4 @@
-module testcontainernetwork
+module github.com/mikebharris/testcontainernetwork-go
 
 go 1.22.2
 
