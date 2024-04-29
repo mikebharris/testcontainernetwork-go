@@ -104,8 +104,15 @@ func (s *steps) theLambdaIsTriggered() {
 }
 
 func (s *steps) theWiremockEndpointIsHit() {
-	req := s.wiremockContainer.GetRequest()
-	if req == nil {
+	adminStatus := s.wiremockContainer.GetAdminStatus()
+	var req Request
+	for _, request := range adminStatus.Requests {
+		if request.Request.AbsoluteUrl == fmt.Sprintf("http://%s:8080/", wiremockHostname) {
+			req = request
+			break
+		}
+	}
+	if req.Request.AbsoluteUrl == "" {
 		s.t.Errorf("unable to find matching call to the endpoint")
 		s.t.Fail()
 	}

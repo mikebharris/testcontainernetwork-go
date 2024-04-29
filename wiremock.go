@@ -67,7 +67,7 @@ func (c *WiremockDockerContainer) StartUsing(ctx context.Context, dockerNetwork 
 	return nil
 }
 
-func (c *WiremockDockerContainer) GetRequest() *Request {
+func (c *WiremockDockerContainer) GetAdminStatus() AdminStatus {
 	wireMockAdminUri := fmt.Sprintf("http://localhost:%d/__admin/requests", c.MappedPort())
 	req, _ := http.NewRequest(http.MethodGet, wireMockAdminUri, nil)
 
@@ -89,18 +89,12 @@ func (c *WiremockDockerContainer) GetRequest() *Request {
 		log.Fatalf("reading body: %v", readErr)
 	}
 
-	var msg AdminStatus
-	if err := json.Unmarshal(body, &msg); err != nil {
+	var adminStatus AdminStatus
+	if err := json.Unmarshal(body, &adminStatus); err != nil {
 		log.Fatalf("Unmarshalling body: %v", err)
 	}
 
-	for _, v := range msg.Requests {
-		if v.Request.AbsoluteUrl == fmt.Sprintf("http://%s:8080/", c.Config.Hostname) {
-			return &v
-		}
-	}
-
-	return nil
+	return adminStatus
 }
 
 type AdminStatus struct {
