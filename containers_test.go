@@ -23,8 +23,8 @@ func TestDockerContainerNetwork(t *testing.T) {
 
 	suite := godog.TestSuite{
 		TestSuiteInitializer: func(ctx *godog.TestSuiteContext) {
-			ctx.BeforeSuite(steps.startNetwork)
-			ctx.AfterSuite(steps.stopNetwork)
+			ctx.BeforeSuite(steps.startContainerNetwork)
+			ctx.AfterSuite(steps.stopContainerNetwork)
 		},
 		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
 			ctx.Step(`^the Lambda is triggered$`, steps.theLambdaIsTriggered)
@@ -52,7 +52,7 @@ type steps struct {
 	t                         *testing.T
 }
 
-func (s *steps) startNetwork() {
+func (s *steps) startContainerNetwork() {
 	s.lambdaContainer = LambdaDockerContainer{
 		Config: LambdaDockerContainerConfig{
 			Executable:  "test-assets/lambda/main",
@@ -73,7 +73,7 @@ func (s *steps) startNetwork() {
 			StartWithDelay(2 * time.Second)
 }
 
-func (s *steps) stopNetwork() {
+func (s *steps) stopContainerNetwork() {
 	if err := s.networkOfDockerContainers.Stop(); err != nil {
 		log.Fatalf("stopping docker containers: %v", err)
 	}
