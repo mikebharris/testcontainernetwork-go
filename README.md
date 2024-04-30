@@ -44,28 +44,6 @@ func main() {
 }
 ```
 
-## Clients
-
-There is a client for some container types that provides a simple way to interact with the container. For example, the SQS client provides methods to receive messages from the SQS server:
-
-```go
-package main
-
-import "github.com/mikebharris/testcontainernetwork/clients"
-
-func main() {
-	sqsClient, _ := clients.SqsClient{}.New(s.sqsContainer.MappedPort())
-	if err != nil {
-		log.Fatalf("creating SQS client: %v", err)
-	}
-
-	messagesOnQueue, err := sqsClient.GetMessagesFrom(sqsQueueName)
-	if err != nil {
-		log.Fatalf("getting messages from SQS: %v", err)
-	}
-}
-```
-
 ## Implementing a new container
 
 The container should _promote_ the values and methods of _GenericDockerContainer_ and implement the
