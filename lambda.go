@@ -14,10 +14,6 @@ type LambdaDockerContainer struct {
 	Config LambdaDockerContainerConfig
 }
 
-func (c *LambdaDockerContainer) Stop(ctx context.Context) error {
-	return c.dockerContainer.Terminate(ctx)
-}
-
 func (c *LambdaDockerContainer) StartUsing(ctx context.Context, dockerNetwork *testcontainers.DockerNetwork) error {
 	if c.Config.Hostname == "" {
 		c.Config.Hostname = "lambda"

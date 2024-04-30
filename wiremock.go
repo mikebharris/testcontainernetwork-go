@@ -20,10 +20,6 @@ type WiremockDockerContainer struct {
 	Config WiremockDockerContainerConfig
 }
 
-func (c *WiremockDockerContainer) Stop(ctx context.Context) error {
-	return c.dockerContainer.Terminate(ctx)
-}
-
 func (c *WiremockDockerContainer) StartUsing(ctx context.Context, dockerNetwork *testcontainers.DockerNetwork) error {
 	wd, err := os.Getwd()
 	if err != nil {

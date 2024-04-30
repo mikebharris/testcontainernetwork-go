@@ -29,6 +29,10 @@ func (c *GenericDockerContainer) MappedPort() int {
 	return mappedPort.Int()
 }
 
+func (c *GenericDockerContainer) Stop(ctx context.Context) error {
+	return c.dockerContainer.Terminate(ctx)
+}
+
 type NetworkOfDockerContainers struct {
 	dockerNetwork    *testcontainers.DockerNetwork
 	dockerContainers []StartableDockerContainer
