@@ -29,7 +29,6 @@ func TestDockerContainerNetwork(t *testing.T) {
 	suite := godog.TestSuite{
 		TestSuiteInitializer: func(ctx *godog.TestSuiteContext) {
 			ctx.BeforeSuite(steps.startContainerNetwork)
-			//ctx.BeforeSuite(steps.setUpSqsClient)
 			ctx.AfterSuite(steps.stopContainerNetwork)
 		},
 		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
@@ -91,14 +90,6 @@ func (s *steps) startContainerNetwork() {
 			WithDockerContainer(&s.sqsContainer).
 			StartWithDelay(2 * time.Second)
 }
-
-//func (s *steps) setUpSqsClient() {
-//	var err error
-//	s.sqsClient2, err = clients.SqsClient{}.New(s.sqsContainer.MappedPort())
-//	if err != nil {
-//		log.Fatalf("creating SQS client: %v", err)
-//	}
-//}
 
 func (s *steps) stopContainerNetwork() {
 	if err := s.networkOfDockerContainers.Stop(); err != nil {
