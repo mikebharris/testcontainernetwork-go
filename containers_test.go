@@ -2,18 +2,14 @@ package testcontainernetwork
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"github.com/mikebharris/testcontainernetwork-go/clients"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"net/http"
-	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -34,7 +30,7 @@ func TestDockerContainerNetwork(t *testing.T) {
 	suite := godog.TestSuite{
 		TestSuiteInitializer: func(ctx *godog.TestSuiteContext) {
 			ctx.BeforeSuite(steps.startContainerNetwork)
-			ctx.BeforeSuite(steps.setUpSqsClient)
+			//ctx.BeforeSuite(steps.setUpSqsClient)
 			ctx.AfterSuite(steps.stopContainerNetwork)
 		},
 		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
@@ -63,6 +59,7 @@ type steps struct {
 	wiremockContainer         WiremockDockerContainer
 	sqsContainer              SqsDockerContainer
 	sqsClient                 *sqs.Client
+	sqsClient2                clients.SqsClient
 	t                         *testing.T
 }
 
@@ -98,15 +95,13 @@ func (s *steps) startContainerNetwork() {
 			StartWithDelay(2 * time.Second)
 }
 
-func (s *steps) setUpSqsClient() {
-	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(os.Getenv("AWS_REGION")))
-	if err != nil {
-		log.Fatalf("loading config: %v", err)
-	}
-	s.sqsClient = sqs.NewFromConfig(cfg, func(o *sqs.Options) {
-		o.BaseEndpoint = aws.String(fmt.Sprintf("http://%s:%d", "localhost", s.sqsContainer.MappedPort()))
-	})
-}
+//func (s *steps) setUpSqsClient() {
+//	var err error
+//	s.sqsClient2, err = clients.SqsClient{}.New(s.sqsContainer.MappedPort())
+//	if err != nil {
+//		log.Fatalf("creating SQS client: %v", err)
+//	}
+//}
 
 func (s *steps) stopContainerNetwork() {
 	if err := s.networkOfDockerContainers.Stop(); err != nil {
@@ -165,31 +160,15 @@ func (s *steps) theLambdaWritesTheMessageToTheLog() {
 }
 
 func (s *steps) theLambdaWritesTheMessageToTheSqsQueue() {
-	messagesOnQueue := s.getMessages()
+	sqsClient, err := clients.SqsClient{}.New(s.sqsContainer.MappedPort())
+	if err != nil {
+		log.Fatalf("creating SQS client: %v", err)
+	}
+
+	messagesOnQueue, err := sqsClient.GetMessagesFrom(sqsQueueName)
+	if err != nil {
+		log.Fatalf("getting messages from SQS: %v", err)
+	}
 	assert.Equal(s.t, 1, len(messagesOnQueue))
 	assert.Equal(s.t, "{\"message\":\"Hello World!\"}", *messagesOnQueue[0].Body)
-}
-
-func (s *steps) getMessages() []types.Message {
-	queueUrlOutput, err := s.sqsClient.GetQueueUrl(
-		context.Background(),
-		&sqs.GetQueueUrlInput{
-			QueueName: aws.String(sqsQueueName),
-		},
-	)
-	if err != nil {
-		s.t.Fatalf("getting queue url: %v", err)
-	}
-
-	receiveMessageOutput, err := s.sqsClient.ReceiveMessage(
-		context.Background(),
-		&sqs.ReceiveMessageInput{
-			QueueUrl:            queueUrlOutput.QueueUrl,
-			MaxNumberOfMessages: 10,
-		},
-	)
-	if err != nil {
-		s.t.Fatalf("receiving messages: %v", err)
-	}
-	return receiveMessageOutput.Messages
 }
