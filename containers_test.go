@@ -83,12 +83,13 @@ func (s *steps) startContainerNetwork() {
 			ConfigFilePath: "test-assets/sqs/elasticmq.conf",
 		},
 	}
+
 	s.networkOfDockerContainers =
 		NetworkOfDockerContainers{}.
 			WithDockerContainer(&s.lambdaContainer).
 			WithDockerContainer(&s.wiremockContainer).
-			WithDockerContainer(&s.sqsContainer).
-			StartWithDelay(2 * time.Second)
+			WithDockerContainer(&s.sqsContainer)
+	_ = s.networkOfDockerContainers.StartWithDelay(2 * time.Second)
 }
 
 func (s *steps) stopContainerNetwork() {

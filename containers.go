@@ -43,22 +43,24 @@ func (n NetworkOfDockerContainers) WithDockerContainer(dockerContainer Startable
 	return n
 }
 
-func (n NetworkOfDockerContainers) StartWithDelay(delay time.Duration) NetworkOfDockerContainers {
+// StartWithDelay has intentional mixed use of pointer and value receivers because this method
+// has side effects and thus this fits better with a functional programming paradigm
+func (n *NetworkOfDockerContainers) StartWithDelay(delay time.Duration) error {
 	ctx := context.Background()
 	var err error
 	if n.dockerNetwork, err = network.New(ctx); err != nil {
-		log.Fatalf("creating network: %s", err)
+		return fmt.Errorf("creating network: %s", err)
 	}
 	for _, dockerContainer := range n.dockerContainers {
 		if err := dockerContainer.StartUsing(ctx, n.dockerNetwork); err != nil {
-			log.Fatalf("starting docker container: %s", err)
+			return fmt.Errorf("starting docker container: %s", err)
 		}
 	}
 	if delay > 0 {
 		fmt.Printf("Sleeping for %s while containers start\n", delay)
 		time.Sleep(delay)
 	}
-	return n
+	return nil
 }
 
 func (n NetworkOfDockerContainers) Stop() error {
