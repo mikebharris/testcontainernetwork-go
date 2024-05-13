@@ -16,7 +16,7 @@ import (
 )
 
 type WiremockDockerContainer struct {
-	GenericDockerContainer
+	DockerContainer
 	Config WiremockDockerContainerConfig
 }
 

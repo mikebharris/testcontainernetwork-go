@@ -16,12 +16,12 @@ type StartableDockerContainer interface {
 	Stop(ctx context.Context) error
 }
 
-type GenericDockerContainer struct {
+type DockerContainer struct {
 	dockerContainer     testcontainers.Container
 	internalServicePort int
 }
 
-func (c *GenericDockerContainer) MappedPort() int {
+func (c *DockerContainer) MappedPort() int {
 	mappedPort, err := c.dockerContainer.MappedPort(context.Background(), nat.Port(fmt.Sprintf("%d/tcp", c.internalServicePort)))
 	if err != nil {
 		log.Fatalf("getting mapped port: %v", err)
@@ -29,7 +29,7 @@ func (c *GenericDockerContainer) MappedPort() int {
 	return mappedPort.Int()
 }
 
-func (c *GenericDockerContainer) Stop(ctx context.Context) error {
+func (c *DockerContainer) Stop(ctx context.Context) error {
 	return c.dockerContainer.Terminate(ctx)
 }
 

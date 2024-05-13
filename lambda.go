@@ -10,7 +10,7 @@ import (
 )
 
 type LambdaDockerContainer struct {
-	GenericDockerContainer
+	DockerContainer
 	Config LambdaDockerContainerConfig
 }
 

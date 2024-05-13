@@ -14,7 +14,7 @@ type SqsDockerContainerConfig struct {
 }
 
 type SqsDockerContainer struct {
-	GenericDockerContainer
+	DockerContainer
 	Config SqsDockerContainerConfig
 }
 
