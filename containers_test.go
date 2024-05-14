@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	sqsHostname      = "sqs"
 	wiremockHostname = "wiremock"
+	sqsHostname      = "sqs"
 	sqsQueueName     = "sqs-queue"
+	snsHostname      = "sns"
 )
 
 func TestDockerContainerNetwork(t *testing.T) {
@@ -36,6 +37,7 @@ func TestDockerContainerNetwork(t *testing.T) {
 			ctx.Step(`^the Wiremock endpoint is hit`, steps.theWiremockEndpointIsHit)
 			ctx.Step(`^the Lambda writes the message to the log`, steps.theLambdaWritesTheMessageToTheLog)
 			ctx.Step(`^the Lambda writes a message to the SQS queue`, steps.theLambdaWritesTheMessageToTheSqsQueue)
+			ctx.Step(`^the Lambda sends a notification to the SNS topic$`, steps.theLambdaSendsANotificationToTheSNSTopic)
 		},
 		Options: &godog.Options{
 			StopOnFailure: true,
@@ -55,6 +57,7 @@ type steps struct {
 	networkOfDockerContainers NetworkOfDockerContainers
 	lambdaContainer           LambdaDockerContainer
 	wiremockContainer         WiremockDockerContainer
+	snsContainer              SnsDockerContainer
 	sqsContainer              SqsDockerContainer
 	t                         *testing.T
 }
@@ -83,12 +86,19 @@ func (s *steps) startContainerNetwork() {
 			ConfigFilePath: "test-assets/sqs/elasticmq.conf",
 		},
 	}
+	s.snsContainer = SnsDockerContainer{
+		Config: SnsDockerContainerConfig{
+			Hostname:       snsHostname,
+			ConfigFilePath: "test-assets/sns/sns.json",
+		},
+	}
 
 	s.networkOfDockerContainers =
 		NetworkOfDockerContainers{}.
 			WithDockerContainer(&s.lambdaContainer).
 			WithDockerContainer(&s.wiremockContainer).
-			WithDockerContainer(&s.sqsContainer)
+			WithDockerContainer(&s.sqsContainer).
+			WithDockerContainer(&s.snsContainer)
 	_ = s.networkOfDockerContainers.StartWithDelay(2 * time.Second)
 }
 
@@ -160,4 +170,11 @@ func (s *steps) theLambdaWritesTheMessageToTheSqsQueue() {
 	}
 	assert.Equal(s.t, 1, len(messagesOnQueue))
 	assert.Equal(s.t, "{\"message\":\"Hello World!\"}", *messagesOnQueue[0].Body)
+}
+
+func (s *steps) theLambdaSendsANotificationToTheSNSTopic() error {
+	message, _ := s.snsContainer.GetMessage()
+	assert.Equal(s.t, "", message)
+
+	return nil
 }

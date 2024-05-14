@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "timestamp": 1565778125,
+  "subscriptions": [
+    {
+      "arn":  "889aad80-be7d-11e9-9cb5-2a2ae2dbcce4",
+      "topicArn": "arn:aws:sns:eu-west-1:12345678999:sns-topic",
+      "endpoint": "file://tmp?fileName=sns.log",
+      "owner": "",
+      "protocol": "file"
+    }
+  ],
+  "topics": [
+    {
+      "arn": "arn:aws:sns:eu-west-1:12345678999:sns-topic",
+      "name": "dbs-cmi-team-dsr-notification-topic"
+    }
+  ]
+}
