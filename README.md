@@ -5,7 +5,8 @@ for [testcontainers in Go](https://github.com/testcontainers/testcontainers-go).
 
 * LambdaDockerContainer - a container that runs a Lambda function
 * WiremockDockerContainer - a container that runs a Wiremock server
-* SqsDockerContainer - a container that runs an SQS server
+* SqsDockerContainer - a container that runs an AWS Simple Queue Service server
+* SnsDockerContainer - a container that runs an AWS Simple Notification Service server
 
 ## Testing
 
