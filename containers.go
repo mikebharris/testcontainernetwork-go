@@ -63,7 +63,7 @@ func (n *NetworkOfDockerContainers) StartWithDelay(delay time.Duration) error {
 	return nil
 }
 
-func (n NetworkOfDockerContainers) Stop() error {
+func (n *NetworkOfDockerContainers) Stop() error {
 	ctx := context.Background()
 	for _, dockerContainer := range n.dockerContainers {
 		if err := dockerContainer.Stop(ctx); err != nil {

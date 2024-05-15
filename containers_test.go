@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"log"
 	"net/http"
+	"os"
+	"path"
 	"regexp"
 	"testing"
 	"time"
@@ -17,8 +19,9 @@ import (
 )
 
 const (
-	sqsHostname      = "sqs"
 	wiremockHostname = "wiremock"
+	snsHostname      = "sns"
+	sqsHostname      = "sqs"
 	sqsQueueName     = "sqs-queue"
 )
 
@@ -36,6 +39,7 @@ func TestDockerContainerNetwork(t *testing.T) {
 			ctx.Step(`^the Wiremock endpoint is hit`, steps.theWiremockEndpointIsHit)
 			ctx.Step(`^the Lambda writes the message to the log`, steps.theLambdaWritesTheMessageToTheLog)
 			ctx.Step(`^the Lambda writes a message to the SQS queue`, steps.theLambdaWritesTheMessageToTheSqsQueue)
+			ctx.Step(`^the Lambda sends a notification to the SNS topic`, steps.theLambdaSendsANotificationToTheSnsTopic)
 		},
 		Options: &godog.Options{
 			StopOnFailure: true,
@@ -56,10 +60,33 @@ type steps struct {
 	lambdaContainer           LambdaDockerContainer
 	wiremockContainer         WiremockDockerContainer
 	sqsContainer              SqsDockerContainer
+	snsContainer              SnsDockerContainer
 	t                         *testing.T
 }
 
 func (s *steps) startContainerNetwork() {
+	s.wiremockContainer = WiremockDockerContainer{
+		Config: WiremockDockerContainerConfig{
+			Hostname:     wiremockHostname,
+			JsonMappings: "test-assets/wiremock/mappings",
+		},
+	}
+
+	wd, _ := os.Getwd()
+	s.sqsContainer = SqsDockerContainer{
+		Config: SqsDockerContainerConfig{
+			Hostname:       sqsHostname,
+			ConfigFilePath: path.Join(wd, "test-assets/sqs/elasticmq.conf"),
+		},
+	}
+	s.snsContainer = SnsDockerContainer{
+		Config: SnsDockerContainerConfig{
+			Hostname:   snsHostname,
+			ConfigFile: path.Join(wd, "test-assets/sns/sns.json"),
+		},
+	}
+
+	// TODO: the ports are hard-coded in the containers.go file - there should be a way of getting them from the containers
 	s.lambdaContainer = LambdaDockerContainer{
 		Config: LambdaDockerContainerConfig{
 			Hostname:   "lambda",
@@ -68,19 +95,9 @@ func (s *steps) startContainerNetwork() {
 				"API_ENDPOINT":   fmt.Sprintf("http://%s:8080", wiremockHostname),
 				"SQS_ENDPOINT":   fmt.Sprintf("http://%s:9324", sqsHostname),
 				"SQS_QUEUE_NAME": sqsQueueName,
+				"SNS_ENDPOINT":   fmt.Sprintf("http://%s:9911", snsHostname),
+				"SNS_TOPIC_ARN":  "arn:aws:sns:eu-west-1:12345678999:sns-topic",
 			},
-		},
-	}
-	s.wiremockContainer = WiremockDockerContainer{
-		Config: WiremockDockerContainerConfig{
-			Hostname:     wiremockHostname,
-			JsonMappings: "test-assets/wiremock/mappings",
-		},
-	}
-	s.sqsContainer = SqsDockerContainer{
-		Config: SqsDockerContainerConfig{
-			Hostname:       sqsHostname,
-			ConfigFilePath: "test-assets/sqs/elasticmq.conf",
 		},
 	}
 
@@ -88,7 +105,8 @@ func (s *steps) startContainerNetwork() {
 		NetworkOfDockerContainers{}.
 			WithDockerContainer(&s.lambdaContainer).
 			WithDockerContainer(&s.wiremockContainer).
-			WithDockerContainer(&s.sqsContainer)
+			WithDockerContainer(&s.sqsContainer).
+			WithDockerContainer(&s.snsContainer)
 	_ = s.networkOfDockerContainers.StartWithDelay(2 * time.Second)
 }
 
@@ -160,4 +178,12 @@ func (s *steps) theLambdaWritesTheMessageToTheSqsQueue() {
 	}
 	assert.Equal(s.t, 1, len(messagesOnQueue))
 	assert.Equal(s.t, "{\"message\":\"Hello World!\"}", *messagesOnQueue[0].Body)
+}
+
+func (s *steps) theLambdaSendsANotificationToTheSnsTopic() {
+	message, err := s.snsContainer.GetMessage()
+	if err != nil {
+		log.Fatalf("getting message from SNS: %v", err)
+	}
+	assert.Equal(s.t, "{\"message\":\"Hello World!\"}", message)
 }
