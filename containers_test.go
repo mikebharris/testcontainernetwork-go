@@ -191,7 +191,7 @@ func (s *steps) theLambdaIsTriggered() {
 }
 
 func (s *steps) theWiremockEndpointIsHit() {
-	adminStatus := s.wiremockContainer.GetAdminStatus()
+	adminStatus, _ := s.wiremockContainer.GetAdminStatus()
 	var req WiremockAdminRequest
 	for _, request := range adminStatus.Requests {
 		if request.Request.AbsoluteUrl == fmt.Sprintf("http://%s:8080/", wiremockHostname) {
@@ -209,7 +209,7 @@ func (s *steps) theWiremockEndpointIsHit() {
 }
 
 func (s *steps) theLambdaWritesTheMessageToTheLog() {
-	buffer := s.lambdaContainer.Log()
+	buffer, _ := s.lambdaContainer.Log()
 	matched, err := regexp.Match("Wiremock returned a message of Hello World!", buffer.Bytes())
 	if matched != true || err != nil {
 		s.t.Errorf("Lambda log did not contain expected value. Expected: \"Wiremock returned a message of Hello World!\", Got: %s", buffer.String())

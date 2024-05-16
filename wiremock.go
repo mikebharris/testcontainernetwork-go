@@ -54,16 +54,16 @@ func (c *WiremockDockerContainer) StartUsing(ctx context.Context, dockerNetwork 
 		Started:          false,
 	})
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("creating container: %w", err)
 	}
 
 	if err := c.dockerContainer.Start(ctx); err != nil {
-		panic(err)
+		return fmt.Errorf("starting container: %w", err)
 	}
 	return nil
 }
 
-func (c *WiremockDockerContainer) GetAdminStatus() WiremockAdminStatus {
+func (c *WiremockDockerContainer) GetAdminStatus() (WiremockAdminStatus, error) {
 	wireMockAdminUri := fmt.Sprintf("http://localhost:%d/__admin/requests", c.MappedPort())
 	req, _ := http.NewRequest(http.MethodGet, wireMockAdminUri, nil)
 
@@ -82,15 +82,15 @@ func (c *WiremockDockerContainer) GetAdminStatus() WiremockAdminStatus {
 
 	body, readErr := io.ReadAll(res.Body)
 	if readErr != nil {
-		log.Fatalf("reading body: %v", readErr)
+		return WiremockAdminStatus{}, fmt.Errorf("reading body: %v", readErr)
 	}
 
 	var wiremockAdminStatus WiremockAdminStatus
 	if err := json.Unmarshal(body, &wiremockAdminStatus); err != nil {
-		log.Fatalf("Unmarshalling body: %v", err)
+		return WiremockAdminStatus{}, fmt.Errorf("unmarshalling body: %v", err)
 	}
 
-	return wiremockAdminStatus
+	return wiremockAdminStatus, nil
 }
 
 type WiremockAdminStatus struct {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types/container"
 	"github.com/testcontainers/testcontainers-go"
-	"log"
 )
 
 type SqsDockerContainerConfig struct {
@@ -43,7 +42,7 @@ func (c *SqsDockerContainer) StartUsing(ctx context.Context, dockerNetwork *test
 	}
 
 	if err = c.dockerContainer.CopyFileToContainer(ctx, c.Config.ConfigFilePath, "/opt/elasticmq.conf", 365); err != nil {
-		log.Fatalf("copying config file to docker container: %v", err)
+		return fmt.Errorf("copying config file to docker container: %w", err)
 	}
 
 	if err := c.dockerContainer.Start(ctx); err != nil {

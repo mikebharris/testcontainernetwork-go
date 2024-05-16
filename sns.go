@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types/container"
 	"github.com/testcontainers/testcontainers-go"
-	"log"
 )
 
 type SnsDockerContainerConfig struct {
@@ -45,7 +44,7 @@ func (c *SnsDockerContainer) StartUsing(ctx context.Context, dockerNetwork *test
 	}
 
 	if err = c.dockerContainer.CopyFileToContainer(ctx, c.Config.ConfigFile, "/etc/sns/db.json", 365); err != nil {
-		log.Fatalf("copying config file to docker container: %v", err)
+		return fmt.Errorf("copying config file to docker container: %v", err)
 	}
 
 	if err := c.dockerContainer.Start(ctx); err != nil {

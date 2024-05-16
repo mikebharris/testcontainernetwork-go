@@ -6,8 +6,13 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types/container"
 	"github.com/testcontainers/testcontainers-go"
-	"log"
 )
+
+type LambdaDockerContainerConfig struct {
+	Executable  string
+	Environment map[string]string
+	Hostname    string
+}
 
 type LambdaDockerContainer struct {
 	DockerContainer
@@ -36,13 +41,13 @@ func (c *LambdaDockerContainer) StartUsing(ctx context.Context, dockerNetwork *t
 		Started:          false,
 	})
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("creating container: %w", err)
 	}
 	if err = c.dockerContainer.CopyFileToContainer(ctx, c.Config.Executable, "/var/task/handler", 365); err != nil {
-		log.Fatalf("copying binary to docker container: %v", err)
+		return fmt.Errorf("copying binary to docker container: %v", err)
 	}
 	if err := c.dockerContainer.Start(ctx); err != nil {
-		panic(err)
+		return fmt.Errorf("starting container: %w", err)
 	}
 	return nil
 }
@@ -61,24 +66,18 @@ func (c *LambdaDockerContainer) setupEnvironment() map[string]string {
 	return env
 }
 
-func (c *LambdaDockerContainer) Log() *bytes.Buffer {
+func (c *LambdaDockerContainer) Log() (*bytes.Buffer, error) {
 	logs, err := c.dockerContainer.Logs(context.Background())
 	if err != nil {
-		log.Fatalf("getting Lambda logs: %s", err)
+		return nil, fmt.Errorf("getting Lambda logs: %w", err)
 	}
 	buf := new(bytes.Buffer)
 	if _, err := buf.ReadFrom(logs); err != nil {
-		log.Fatalf("Reading log from Lambda container %s", err)
+		return nil, fmt.Errorf("reading Lambda logs: %w", err)
 	}
-	return buf
+	return buf, nil
 }
 
 func (c *LambdaDockerContainer) InvocationUrl() string {
 	return fmt.Sprintf("http://localhost:%d/2015-03-31/functions/myfunction/invocations", c.MappedPort())
-}
-
-type LambdaDockerContainerConfig struct {
-	Executable  string
-	Environment map[string]string
-	Hostname    string
 }
