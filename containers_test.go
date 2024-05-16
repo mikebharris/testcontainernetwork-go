@@ -2,9 +2,14 @@ package testcontainernetwork
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/mikebharris/testcontainernetwork-go/clients"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -19,10 +24,12 @@ import (
 )
 
 const (
-	wiremockHostname = "wiremock"
-	snsHostname      = "sns"
-	sqsHostname      = "sqs"
-	sqsQueueName     = "sqs-queue"
+	wiremockHostname  = "wiremock"
+	snsHostname       = "sns"
+	sqsHostname       = "sqs"
+	sqsQueueName      = "sqs-queue"
+	dynamoDbTableName = "table"
+	dynamoDbHostname  = "dynamodb"
 )
 
 func TestDockerContainerNetwork(t *testing.T) {
@@ -32,6 +39,7 @@ func TestDockerContainerNetwork(t *testing.T) {
 	suite := godog.TestSuite{
 		TestSuiteInitializer: func(ctx *godog.TestSuiteContext) {
 			ctx.BeforeSuite(steps.startContainerNetwork)
+			ctx.BeforeSuite(steps.initiateDynamoDb)
 			ctx.AfterSuite(steps.stopContainerNetwork)
 		},
 		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
@@ -40,6 +48,7 @@ func TestDockerContainerNetwork(t *testing.T) {
 			ctx.Step(`^the Lambda writes the message to the log`, steps.theLambdaWritesTheMessageToTheLog)
 			ctx.Step(`^the Lambda writes a message to the SQS queue`, steps.theLambdaWritesTheMessageToTheSqsQueue)
 			ctx.Step(`^the Lambda sends a notification to the SNS topic`, steps.theLambdaSendsANotificationToTheSnsTopic)
+			ctx.Step(`^the Lambda writes the message to DynamoDB$`, steps.theLambdaWritesTheMessageToDynamoDB)
 		},
 		Options: &godog.Options{
 			StopOnFailure: true,
@@ -61,6 +70,7 @@ type steps struct {
 	wiremockContainer         WiremockDockerContainer
 	sqsContainer              SqsDockerContainer
 	snsContainer              SnsDockerContainer
+	dynamoDbContainer         DynamoDbDockerContainer
 	t                         *testing.T
 }
 
@@ -86,17 +96,25 @@ func (s *steps) startContainerNetwork() {
 		},
 	}
 
+	s.dynamoDbContainer = DynamoDbDockerContainer{
+		Config: DynamoDbDockerContainerConfig{
+			Hostname: dynamoDbHostname,
+		},
+	}
+
 	// TODO: the ports are hard-coded in the containers.go file - there should be a way of getting them from the containers
 	s.lambdaContainer = LambdaDockerContainer{
 		Config: LambdaDockerContainerConfig{
 			Hostname:   "lambda",
 			Executable: "test-assets/lambda/main",
 			Environment: map[string]string{
-				"API_ENDPOINT":   fmt.Sprintf("http://%s:8080", wiremockHostname),
-				"SQS_ENDPOINT":   fmt.Sprintf("http://%s:9324", sqsHostname),
-				"SQS_QUEUE_NAME": sqsQueueName,
-				"SNS_ENDPOINT":   fmt.Sprintf("http://%s:9911", snsHostname),
-				"SNS_TOPIC_ARN":  "arn:aws:sns:eu-west-1:12345678999:sns-topic",
+				"API_ENDPOINT":        fmt.Sprintf("http://%s:8080", wiremockHostname),
+				"SQS_ENDPOINT":        fmt.Sprintf("http://%s:9324", sqsHostname),
+				"SQS_QUEUE_NAME":      sqsQueueName,
+				"SNS_ENDPOINT":        fmt.Sprintf("http://%s:9911", snsHostname),
+				"SNS_TOPIC_ARN":       "arn:aws:sns:eu-west-1:12345678999:sns-topic",
+				"DYNAMODB_ENDPOINT":   fmt.Sprintf("http://%s:8000", dynamoDbHostname),
+				"DYNAMODB_TABLE_NAME": dynamoDbTableName,
 			},
 		},
 	}
@@ -106,13 +124,45 @@ func (s *steps) startContainerNetwork() {
 			WithDockerContainer(&s.lambdaContainer).
 			WithDockerContainer(&s.wiremockContainer).
 			WithDockerContainer(&s.sqsContainer).
-			WithDockerContainer(&s.snsContainer)
+			WithDockerContainer(&s.snsContainer).
+			WithDockerContainer(&s.dynamoDbContainer)
 	_ = s.networkOfDockerContainers.StartWithDelay(2 * time.Second)
 }
 
 func (s *steps) stopContainerNetwork() {
 	if err := s.networkOfDockerContainers.Stop(); err != nil {
 		log.Fatalf("stopping docker containers: %v", err)
+	}
+}
+
+func (s *steps) initiateDynamoDb() {
+	input := &dynamodb.CreateTableInput{
+		AttributeDefinitions: []types.AttributeDefinition{
+			{
+				AttributeName: aws.String("Message"),
+				AttributeType: types.ScalarAttributeTypeS,
+			},
+		},
+		KeySchema: []types.KeySchemaElement{
+			{
+				AttributeName: aws.String("Message"),
+				KeyType:       types.KeyTypeHash,
+			},
+		},
+		ProvisionedThroughput: &types.ProvisionedThroughput{
+			ReadCapacityUnits:  aws.Int64(1),
+			WriteCapacityUnits: aws.Int64(1),
+		},
+		TableName: aws.String("table"),
+	}
+
+	dynamoDbClient, err := s.newDynamoDbClient(s.dynamoDbContainer.MappedPort())
+	if err != nil {
+		log.Fatalf("creating DynamoDB client: %v", err)
+	}
+
+	if _, err = dynamoDbClient.CreateTable(context.Background(), input); err != nil {
+		log.Fatalf("creating table: %v", err)
 	}
 }
 
@@ -186,4 +236,40 @@ func (s *steps) theLambdaSendsANotificationToTheSnsTopic() {
 		log.Fatalf("getting message from SNS: %v", err)
 	}
 	assert.Equal(s.t, "{\"message\":\"Hello World!\"}", message)
+}
+
+func (s *steps) theLambdaWritesTheMessageToDynamoDB() {
+	dynamoDbClient, err := s.newDynamoDbClient(s.dynamoDbContainer.MappedPort())
+	if err != nil {
+		log.Fatalf("creating DynamoDB client: %v", err)
+	}
+
+	scanOutput, err := dynamoDbClient.Scan(context.Background(), &dynamodb.ScanInput{
+		TableName: aws.String("table"),
+	})
+	if err != nil {
+		log.Fatalf("scanning DynamoDB: %v", err)
+	}
+
+	assert.Equal(s.t, 1, len(scanOutput.Items))
+
+	type Message struct {
+		Message string `json:"message"`
+	}
+	var message Message
+	if err = json.Unmarshal([]byte(scanOutput.Items[0]["Message"].(*types.AttributeValueMemberS).Value), &message); err != nil {
+		log.Fatalf("unmarshalling message: %v", err)
+	}
+
+	assert.Equal(s.t, "Hello World!", message.Message)
+}
+
+func (s *steps) newDynamoDbClient(port int) (*dynamodb.Client, error) {
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion("us-east-1"))
+	if err != nil {
+		return nil, fmt.Errorf("loading config: %v", err)
+	}
+	return dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
+		o.BaseEndpoint = aws.String(fmt.Sprintf("http://%s:%d", "localhost", port))
+	}), nil
 }

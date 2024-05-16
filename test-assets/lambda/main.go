@@ -6,6 +6,8 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"io"
@@ -19,6 +21,7 @@ func main() {
 		message := getMessageFromEndpoint(os.Getenv("API_ENDPOINT"))
 		message.sendToSqsQueue(os.Getenv("SQS_QUEUE_NAME"))
 		message.sendToSnsTopic(os.Getenv("SNS_TOPIC_ARN"))
+		message.writeToDynamoDbTable(os.Getenv("DYNAMODB_TABLE_NAME"))
 		return nil
 	})
 }
@@ -47,6 +50,17 @@ func (m message) sendToSnsTopic(topic string) {
 		TopicArn: aws.String(topic),
 	}); err != nil {
 		log.Fatalf("publishing message: %v", err)
+	}
+}
+
+func (m message) writeToDynamoDbTable(table string) {
+	if _, err := dynamoDbClient().PutItem(context.Background(), &dynamodb.PutItemInput{
+		TableName: aws.String(table),
+		Item: map[string]types.AttributeValue{
+			"Message": &types.AttributeValueMemberS{Value: string(m)},
+		},
+	}); err != nil {
+		log.Fatalf("writing to dynamodb: %v", err)
 	}
 }
 
@@ -82,10 +96,9 @@ func sqsClient() *sqs.Client {
 	if err != nil {
 		log.Fatalf("loading config: %v", err)
 	}
-	client := sqs.NewFromConfig(cfg, func(o *sqs.Options) {
+	return sqs.NewFromConfig(cfg, func(o *sqs.Options) {
 		o.BaseEndpoint = aws.String(os.Getenv("SQS_ENDPOINT"))
 	})
-	return client
 }
 
 func snsClient() *sns.Client {
@@ -97,4 +110,14 @@ func snsClient() *sns.Client {
 		o.BaseEndpoint = aws.String(os.Getenv("SNS_ENDPOINT"))
 	})
 	return client
+}
+
+func dynamoDbClient() *dynamodb.Client {
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(os.Getenv("AWS_REGION")))
+	if err != nil {
+		log.Fatalf("loading config: %v", err)
+	}
+	return dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
+		o.BaseEndpoint = aws.String(os.Getenv("DYNAMODB_ENDPOINT"))
+	})
 }
