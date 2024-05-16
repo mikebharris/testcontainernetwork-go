@@ -10,6 +10,7 @@ import (
 type SqsDockerContainerConfig struct {
 	Hostname       string
 	ConfigFilePath string
+	Port           int
 }
 
 type SqsDockerContainer struct {
@@ -18,10 +19,7 @@ type SqsDockerContainer struct {
 }
 
 func (c *SqsDockerContainer) StartUsing(ctx context.Context, dockerNetwork *testcontainers.DockerNetwork) error {
-	if c.Config.Hostname == "" {
-		c.Config.Hostname = "sqs"
-	}
-	c.internalServicePort = 9324
+	c.internalServicePort = c.Config.Port
 	req := testcontainers.ContainerRequest{
 		Image:        "softwaremill/elasticmq",
 		ExposedPorts: []string{fmt.Sprintf("%d/tcp", c.internalServicePort)},

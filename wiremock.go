@@ -15,6 +15,12 @@ import (
 	"time"
 )
 
+type WiremockDockerContainerConfig struct {
+	JsonMappings string
+	Hostname     string
+	Port         int
+}
+
 type WiremockDockerContainer struct {
 	DockerContainer
 	Config WiremockDockerContainerConfig
@@ -26,10 +32,7 @@ func (c *WiremockDockerContainer) StartUsing(ctx context.Context, dockerNetwork 
 		panic(err)
 	}
 
-	if c.Config.Hostname == "" {
-		c.Config.Hostname = "wiremock"
-	}
-	c.internalServicePort = 8080
+	c.internalServicePort = c.Config.Port
 
 	req := testcontainers.ContainerRequest{
 		Image:        "wiremock/wiremock",
@@ -128,9 +131,4 @@ type WiremockAdminRequest struct {
 		Body   string `json:"body"`
 	} `json:"responseDefinition"`
 	WasMatched bool `json:"wasMatched"`
-}
-
-type WiremockDockerContainerConfig struct {
-	JsonMappings string
-	Hostname     string
 }

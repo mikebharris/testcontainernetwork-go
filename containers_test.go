@@ -23,11 +23,15 @@ import (
 
 const (
 	wiremockHostname  = "wiremock"
+	wiremockPort      = 8080
 	snsHostname       = "sns"
+	snsPort           = 9911
 	sqsHostname       = "sqs"
+	sqsPort           = 9324
 	sqsQueueName      = "sqs-queue"
-	dynamoDbTableName = "table"
 	dynamoDbHostname  = "dynamodb"
+	dynamoDbPort      = 8000
+	dynamoDbTableName = "table"
 )
 
 func TestDockerContainerNetwork(t *testing.T) {
@@ -76,6 +80,7 @@ func (s *steps) startContainerNetwork() {
 	s.wiremockContainer = WiremockDockerContainer{
 		Config: WiremockDockerContainerConfig{
 			Hostname:     wiremockHostname,
+			Port:         wiremockPort,
 			JsonMappings: "test-assets/wiremock/mappings",
 		},
 	}
@@ -84,12 +89,14 @@ func (s *steps) startContainerNetwork() {
 	s.sqsContainer = SqsDockerContainer{
 		Config: SqsDockerContainerConfig{
 			Hostname:       sqsHostname,
+			Port:           sqsPort,
 			ConfigFilePath: path.Join(wd, "test-assets/sqs/elasticmq.conf"),
 		},
 	}
 	s.snsContainer = SnsDockerContainer{
 		Config: SnsDockerContainerConfig{
 			Hostname:   snsHostname,
+			Port:       snsPort,
 			ConfigFile: path.Join(wd, "test-assets/sns/sns.json"),
 		},
 	}
@@ -97,21 +104,21 @@ func (s *steps) startContainerNetwork() {
 	s.dynamoDbContainer = DynamoDbDockerContainer{
 		Config: DynamoDbDockerContainerConfig{
 			Hostname: dynamoDbHostname,
+			Port:     dynamoDbPort,
 		},
 	}
 
-	// TODO: the ports are hard-coded in the containers.go file - there should be a way of getting them from the containers
 	s.lambdaContainer = LambdaDockerContainer{
 		Config: LambdaDockerContainerConfig{
 			Hostname:   "lambda",
 			Executable: "test-assets/lambda/main",
 			Environment: map[string]string{
-				"API_ENDPOINT":        fmt.Sprintf("http://%s:8080", wiremockHostname),
-				"SQS_ENDPOINT":        fmt.Sprintf("http://%s:9324", sqsHostname),
+				"API_ENDPOINT":        fmt.Sprintf("http://%s:%d", wiremockHostname, wiremockPort),
+				"SQS_ENDPOINT":        fmt.Sprintf("http://%s:%d", sqsHostname, sqsPort),
 				"SQS_QUEUE_NAME":      sqsQueueName,
-				"SNS_ENDPOINT":        fmt.Sprintf("http://%s:9911", snsHostname),
+				"SNS_ENDPOINT":        fmt.Sprintf("http://%s:%d", snsHostname, snsPort),
 				"SNS_TOPIC_ARN":       "arn:aws:sns:eu-west-1:12345678999:sns-topic",
-				"DYNAMODB_ENDPOINT":   fmt.Sprintf("http://%s:8000", dynamoDbHostname),
+				"DYNAMODB_ENDPOINT":   fmt.Sprintf("http://%s:%d", dynamoDbHostname, dynamoDbPort),
 				"DYNAMODB_TABLE_NAME": dynamoDbTableName,
 			},
 		},

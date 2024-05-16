@@ -9,6 +9,7 @@ import (
 
 type DynamoDbDockerContainerConfig struct {
 	Hostname string
+	Port     int
 }
 
 type DynamoDbDockerContainer struct {
@@ -17,10 +18,7 @@ type DynamoDbDockerContainer struct {
 }
 
 func (c *DynamoDbDockerContainer) StartUsing(ctx context.Context, dockerNetwork *testcontainers.DockerNetwork) error {
-	if c.Config.Hostname == "" {
-		c.Config.Hostname = "dynamodb"
-	}
-	c.internalServicePort = 8000
+	c.internalServicePort = c.Config.Port
 	req := testcontainers.ContainerRequest{
 		Image:        "amazon/dynamodb-local",
 		ExposedPorts: []string{fmt.Sprintf("%d/tcp", c.internalServicePort)},

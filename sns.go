@@ -12,6 +12,7 @@ import (
 type SnsDockerContainerConfig struct {
 	Hostname   string
 	ConfigFile string
+	Port       int
 }
 
 type SnsDockerContainer struct {
@@ -20,10 +21,7 @@ type SnsDockerContainer struct {
 }
 
 func (c *SnsDockerContainer) StartUsing(ctx context.Context, dockerNetwork *testcontainers.DockerNetwork) error {
-	if c.Config.Hostname == "" {
-		c.Config.Hostname = "sns"
-	}
-	c.internalServicePort = 9911
+	c.internalServicePort = c.Config.Port
 	req := testcontainers.ContainerRequest{
 		Image:        "warrenseine/sns",
 		ExposedPorts: []string{fmt.Sprintf("%d/tcp", c.internalServicePort)},
