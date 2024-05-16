@@ -2,12 +2,10 @@ package testcontainernetwork
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/mikebharris/testcontainernetwork-go/clients"
@@ -136,7 +134,7 @@ func (s *steps) stopContainerNetwork() {
 }
 
 func (s *steps) initiateDynamoDb() {
-	input := &dynamodb.CreateTableInput{
+	i := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []types.AttributeDefinition{
 			{
 				AttributeName: aws.String("Message"),
@@ -153,15 +151,15 @@ func (s *steps) initiateDynamoDb() {
 			ReadCapacityUnits:  aws.Int64(1),
 			WriteCapacityUnits: aws.Int64(1),
 		},
-		TableName: aws.String("table"),
+		TableName: aws.String(dynamoDbTableName),
 	}
 
-	dynamoDbClient, err := s.newDynamoDbClient(s.dynamoDbContainer.MappedPort())
+	dynamoDbClient, err := clients.DynamoDbClient{}.New(s.dynamoDbContainer.MappedPort())
 	if err != nil {
 		log.Fatalf("creating DynamoDB client: %v", err)
 	}
 
-	if _, err = dynamoDbClient.CreateTable(context.Background(), input); err != nil {
+	if err = dynamoDbClient.CreateTable(i); err != nil {
 		log.Fatalf("creating table: %v", err)
 	}
 }
@@ -239,37 +237,25 @@ func (s *steps) theLambdaSendsANotificationToTheSnsTopic() {
 }
 
 func (s *steps) theLambdaWritesTheMessageToDynamoDB() {
-	dynamoDbClient, err := s.newDynamoDbClient(s.dynamoDbContainer.MappedPort())
+	dynamoDbClient, err := clients.DynamoDbClient{}.New(s.dynamoDbContainer.MappedPort())
 	if err != nil {
 		log.Fatalf("creating DynamoDB client: %v", err)
 	}
 
-	scanOutput, err := dynamoDbClient.Scan(context.Background(), &dynamodb.ScanInput{
-		TableName: aws.String("table"),
-	})
+	items, err := dynamoDbClient.GetItemsInTable(dynamoDbTableName)
 	if err != nil {
 		log.Fatalf("scanning DynamoDB: %v", err)
 	}
 
-	assert.Equal(s.t, 1, len(scanOutput.Items))
+	assert.Equal(s.t, 1, len(items))
 
 	type Message struct {
 		Message string `json:"message"`
 	}
 	var message Message
-	if err = json.Unmarshal([]byte(scanOutput.Items[0]["Message"].(*types.AttributeValueMemberS).Value), &message); err != nil {
+	if err = json.Unmarshal([]byte(items[0]["Message"].(*types.AttributeValueMemberS).Value), &message); err != nil {
 		log.Fatalf("unmarshalling message: %v", err)
 	}
 
 	assert.Equal(s.t, "Hello World!", message.Message)
-}
-
-func (s *steps) newDynamoDbClient(port int) (*dynamodb.Client, error) {
-	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion("us-east-1"))
-	if err != nil {
-		return nil, fmt.Errorf("loading config: %v", err)
-	}
-	return dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
-		o.BaseEndpoint = aws.String(fmt.Sprintf("http://%s:%d", "localhost", port))
-	}), nil
 }

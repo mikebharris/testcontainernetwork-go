@@ -1,0 +1,41 @@
+package clients
+
+import (
+	"context"
+	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"os"
+)
+
+type DynamoDbClient struct {
+	handle *dynamodb.Client
+}
+
+func (c DynamoDbClient) New(port int) (DynamoDbClient, error) {
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(os.Getenv("AWS_REGION")))
+	if err != nil {
+		return DynamoDbClient{}, fmt.Errorf("loading config: %v", err)
+	}
+	c.handle = dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
+		o.BaseEndpoint = aws.String(fmt.Sprintf("http://%s:%d", "localhost", port))
+	})
+	return c, nil
+}
+
+func (c DynamoDbClient) GetItemsInTable(table string) ([]map[string]types.AttributeValue, error) {
+	scanOutput, err := c.handle.Scan(context.Background(), &dynamodb.ScanInput{
+		TableName: aws.String(table),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("scanning DynamoDB: %v", err)
+	}
+	return scanOutput.Items, nil
+}
+
+func (c DynamoDbClient) CreateTable(input *dynamodb.CreateTableInput) error {
+	_, err := c.handle.CreateTable(context.Background(), input)
+	return err
+}
