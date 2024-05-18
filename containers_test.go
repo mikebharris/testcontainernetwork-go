@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"testing"
 	"time"
 
@@ -41,7 +42,7 @@ func TestDockerContainerNetwork(t *testing.T) {
 	suite := godog.TestSuite{
 		TestSuiteInitializer: func(ctx *godog.TestSuiteContext) {
 			ctx.BeforeSuite(steps.startContainerNetwork)
-			ctx.BeforeSuite(steps.initiateDynamoDb)
+			ctx.BeforeSuite(steps.initialiseDynamoDb)
 			ctx.AfterSuite(steps.stopContainerNetwork)
 		},
 		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
@@ -118,7 +119,8 @@ func (s *steps) startContainerNetwork() {
 				"SQS_QUEUE_NAME":      sqsQueueName,
 				"SNS_ENDPOINT":        fmt.Sprintf("http://%s:%d", snsHostname, snsPort),
 				"SNS_TOPIC_ARN":       "arn:aws:sns:eu-west-1:12345678999:sns-topic",
-				"DYNAMODB_ENDPOINT":   fmt.Sprintf("http://%s:%d", dynamoDbHostname, dynamoDbPort),
+				"DYNAMODB_HOSTNAME":   dynamoDbHostname,
+				"DYNAMODB_PORT":       strconv.Itoa(dynamoDbPort),
 				"DYNAMODB_TABLE_NAME": dynamoDbTableName,
 			},
 		},
@@ -140,7 +142,12 @@ func (s *steps) stopContainerNetwork() {
 	}
 }
 
-func (s *steps) initiateDynamoDb() {
+func (s *steps) initialiseDynamoDb() {
+	dynamoDbClient, err := clients.DynamoDbClient{}.New("localhost", s.dynamoDbContainer.MappedPort())
+	if err != nil {
+		log.Fatalf("creating DynamoDB client: %v", err)
+	}
+
 	i := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []types.AttributeDefinition{
 			{
@@ -160,27 +167,18 @@ func (s *steps) initiateDynamoDb() {
 		},
 		TableName: aws.String(dynamoDbTableName),
 	}
-
-	dynamoDbClient, err := clients.DynamoDbClient{}.New(s.dynamoDbContainer.MappedPort())
-	if err != nil {
-		log.Fatalf("creating DynamoDB client: %v", err)
-	}
-
 	if err = dynamoDbClient.CreateTable(i); err != nil {
 		log.Fatalf("creating table: %v", err)
 	}
 }
 
 func (s *steps) theLambdaIsTriggered() {
-	localLambdaInvocationPort := s.lambdaContainer.MappedPort()
-	url := fmt.Sprintf("http://localhost:%d/2015-03-31/functions/myfunction/invocations", localLambdaInvocationPort)
-
 	request := events.APIGatewayProxyRequest{Path: fmt.Sprintf("/api-gateway-stage")}
 	requestJsonBytes, err := json.Marshal(request)
 	if err != nil {
 		log.Fatalf("marshalling lambda request %v", err)
 	}
-	response, err := http.Post(url, "application/json", bytes.NewReader(requestJsonBytes))
+	response, err := http.Post(s.lambdaContainer.InvocationUrl(), "application/json", bytes.NewReader(requestJsonBytes))
 	if err != nil {
 		log.Fatalf("triggering lambda: %v", err)
 	}
@@ -244,7 +242,7 @@ func (s *steps) theLambdaSendsANotificationToTheSnsTopic() {
 }
 
 func (s *steps) theLambdaWritesTheMessageToDynamoDB() {
-	dynamoDbClient, err := clients.DynamoDbClient{}.New(s.dynamoDbContainer.MappedPort())
+	dynamoDbClient, err := clients.DynamoDbClient{}.New("localhost", s.dynamoDbContainer.MappedPort())
 	if err != nil {
 		log.Fatalf("creating DynamoDB client: %v", err)
 	}

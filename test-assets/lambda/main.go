@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -118,6 +119,6 @@ func dynamoDbClient() *dynamodb.Client {
 		log.Fatalf("loading config: %v", err)
 	}
 	return dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
-		o.BaseEndpoint = aws.String(os.Getenv("DYNAMODB_ENDPOINT"))
+		o.BaseEndpoint = aws.String(fmt.Sprintf("http://%s:%s", os.Getenv("DYNAMODB_HOSTNAME"), os.Getenv("DYNAMODB_PORT")))
 	})
 }
