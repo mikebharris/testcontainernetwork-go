@@ -10,8 +10,13 @@ import (
 	"os"
 )
 
+type ISqsClient interface {
+	GetQueueUrl(ctx context.Context, params *sqs.GetQueueUrlInput, optFns ...func(*sqs.Options)) (*sqs.GetQueueUrlOutput, error)
+	ReceiveMessage(ctx context.Context, params *sqs.ReceiveMessageInput, optFns ...func(*sqs.Options)) (*sqs.ReceiveMessageOutput, error)
+}
+
 type SqsClient struct {
-	handle *sqs.Client
+	handle ISqsClient
 }
 
 func (s SqsClient) New(port int) (SqsClient, error) {

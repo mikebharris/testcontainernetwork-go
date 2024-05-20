@@ -11,8 +11,14 @@ import (
 	"os"
 )
 
+type IDynamoDbClient interface {
+	Scan(ctx context.Context, params *dynamodb.ScanInput, optFns ...func(*dynamodb.Options)) (*dynamodb.ScanOutput, error)
+	CreateTable(ctx context.Context, params *dynamodb.CreateTableInput, optFns ...func(*dynamodb.Options)) (*dynamodb.CreateTableOutput, error)
+	PutItem(ctx context.Context, params *dynamodb.PutItemInput, optFns ...func(*dynamodb.Options)) (*dynamodb.PutItemOutput, error)
+}
+
 type DynamoDbClient struct {
-	handle *dynamodb.Client
+	handle IDynamoDbClient
 }
 
 func (c DynamoDbClient) New(hostname string, port int) (DynamoDbClient, error) {
@@ -46,13 +52,13 @@ func (c DynamoDbClient) PutItem(input *dynamodb.PutItemInput) error {
 	return err
 }
 
-func (d DynamoDbClient) PutObject(table string, object interface{}) error {
+func (c DynamoDbClient) PutObject(table string, object interface{}) error {
 	m, err := attributevalue.MarshalMap(object)
 	if err != nil {
 		return err
 	}
 
-	if err := d.PutItem(&dynamodb.PutItemInput{
+	if err := c.PutItem(&dynamodb.PutItemInput{
 		Item:      m,
 		TableName: aws.String(table),
 	}); err != nil {
