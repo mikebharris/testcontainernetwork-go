@@ -2,12 +2,14 @@ package testcontainernetwork
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	_ "github.com/lib/pq"
 	"github.com/mikebharris/testcontainernetwork-go/clients"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -33,6 +35,8 @@ const (
 	dynamoDbHostname  = "dynamodb"
 	dynamoDbPort      = 8000
 	dynamoDbTableName = "table"
+	auroraHostname    = "aurora"
+	auroraPort        = 5432
 )
 
 func TestDockerContainerNetwork(t *testing.T) {
@@ -52,6 +56,7 @@ func TestDockerContainerNetwork(t *testing.T) {
 			ctx.Step(`^the Lambda writes a message to the SQS queue`, steps.theLambdaWritesTheMessageToTheSqsQueue)
 			ctx.Step(`^the Lambda sends a notification to the SNS topic`, steps.theLambdaSendsANotificationToTheSnsTopic)
 			ctx.Step(`^the Lambda writes the message to DynamoDB$`, steps.theLambdaWritesTheMessageToDynamoDB)
+			ctx.Step(`^the Lambda writes the message to the Aurora Postgres database$`, steps.theLambdaWritesTheMessageToTheRDSDatabase)
 		},
 		Options: &godog.Options{
 			StopOnFailure: true,
@@ -74,6 +79,8 @@ type steps struct {
 	sqsContainer              SqsDockerContainer
 	snsContainer              SnsDockerContainer
 	dynamoDbContainer         DynamoDbDockerContainer
+	auroraContainer           PostgresDockerContainer
+	flywayContainer           FlywayDockerContainer
 	t                         *testing.T
 }
 
@@ -109,6 +116,26 @@ func (s *steps) startContainerNetwork() {
 		},
 	}
 
+	s.auroraContainer = PostgresDockerContainer{
+		Config: PostgresDockerContainerConfig{
+			Hostname: auroraHostname,
+			Port:     auroraPort,
+			Environment: map[string]string{
+				"POSTGRES_PASSWORD": "password",
+				"POSTGRES_USER":     "user",
+				"POSTGRES_DB":       "database",
+			},
+		},
+	}
+
+	s.flywayContainer = FlywayDockerContainer{
+		Config: FlywayDockerContainerConfig{
+			Hostname:       "flyway",
+			ConfigFilePath: path.Join(wd, "test-assets/postgres/flyway/conf"),
+			SqlFilePath:    path.Join(wd, "test-assets/postgres/flyway/sql"),
+		},
+	}
+
 	s.lambdaContainer = LambdaDockerContainer{
 		Config: LambdaDockerContainerConfig{
 			Hostname:   "lambda",
@@ -122,6 +149,10 @@ func (s *steps) startContainerNetwork() {
 				"DYNAMODB_HOSTNAME":   dynamoDbHostname,
 				"DYNAMODB_PORT":       strconv.Itoa(dynamoDbPort),
 				"DYNAMODB_TABLE_NAME": dynamoDbTableName,
+				"DATABASE_URL": fmt.Sprintf(
+					"host=%s port=%d user=%s password=%s dbname=%s search_path=%s sslmode=disable",
+					auroraHostname, auroraPort, "user", "password", "database", "database",
+				),
 			},
 		},
 	}
@@ -132,8 +163,10 @@ func (s *steps) startContainerNetwork() {
 			WithDockerContainer(&s.wiremockContainer).
 			WithDockerContainer(&s.sqsContainer).
 			WithDockerContainer(&s.snsContainer).
-			WithDockerContainer(&s.dynamoDbContainer)
-	_ = s.networkOfDockerContainers.StartWithDelay(2 * time.Second)
+			WithDockerContainer(&s.dynamoDbContainer).
+			WithDockerContainer(&s.auroraContainer).
+			WithDockerContainer(&s.flywayContainer)
+	_ = s.networkOfDockerContainers.StartWithDelay(5 * time.Second)
 }
 
 func (s *steps) stopContainerNetwork() {
@@ -263,4 +296,30 @@ func (s *steps) theLambdaWritesTheMessageToDynamoDB() {
 	}
 
 	assert.Equal(s.t, "Hello World!", message.Message)
+}
+
+func (s *steps) theLambdaWritesTheMessageToTheRDSDatabase() {
+	dbConx, err := sql.Open("postgres", fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s search_path=%s sslmode=disable",
+		"localhost", s.auroraContainer.MappedPort(), "user", "password", "database", "database",
+	))
+	if err != nil {
+		log.Fatalf("connecting to database: %v", err)
+	}
+
+	rows, err := dbConx.Query("SELECT message FROM database.messages")
+	if err != nil {
+		log.Fatalf("querying database: %v", err)
+	}
+	if !rows.Next() {
+		log.Fatalf("no rows returned from database")
+	}
+
+	var message string
+	if err = rows.Scan(&message); err != nil {
+		log.Fatalf("scanning rows: %v", err)
+	}
+
+	assert.Equal(s.t, "Hello World!", message)
+
 }

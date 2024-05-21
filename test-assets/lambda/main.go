@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -11,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	_ "github.com/lib/pq"
 	"io"
 	"log"
 	"net/http"
@@ -23,6 +25,7 @@ func main() {
 		message.sendToSqsQueue(os.Getenv("SQS_QUEUE_NAME"))
 		message.sendToSnsTopic(os.Getenv("SNS_TOPIC_ARN"))
 		message.writeToDynamoDbTable(os.Getenv("DYNAMODB_TABLE_NAME"))
+		message.writeToDatabase()
 		return nil
 	})
 }
@@ -62,6 +65,21 @@ func (m message) writeToDynamoDbTable(table string) {
 		},
 	}); err != nil {
 		log.Fatalf("writing to dynamodb: %v", err)
+	}
+}
+
+func (m message) writeToDatabase() {
+	statement := `insert into database.messages(message) values($1)`
+	log.Println("Writing to database using statement: ", statement)
+
+	var message struct {
+		Message string `json:"message"`
+	}
+	if err := json.Unmarshal([]byte(m), &message); err != nil {
+		log.Fatalf("unmarshalling %s: %v", m, err)
+	}
+	if _, err := databaseClient().Exec(statement, message.Message); err != nil {
+		log.Fatalf("writing to database: %v", err)
 	}
 }
 
@@ -121,4 +139,12 @@ func dynamoDbClient() *dynamodb.Client {
 	return dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
 		o.BaseEndpoint = aws.String(fmt.Sprintf("http://%s:%s", os.Getenv("DYNAMODB_HOSTNAME"), os.Getenv("DYNAMODB_PORT")))
 	})
+}
+
+func databaseClient() *sql.DB {
+	dbConx, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatalf("opening database connection: %v", err)
+	}
+	return dbConx
 }
