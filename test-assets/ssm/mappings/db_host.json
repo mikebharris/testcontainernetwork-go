@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/",
+    "bodyPatterns": [
+      {
+        "equalToJson": {
+          "Name": "/db-url",
+          "WithDecryption": true
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "body": "{\"Parameter\":{\"ARN\":\"arn:aws:ssm:us-east-2:111122223333:parameter/db-url\",\"DataType\":\"text\",\"LastModifiedDate\":1582657288.8,\"Name\":\"/db-url\",\"Type\":\"String\",\"Value\":\"host=aurora port=5432 user=user password=password dbname=database search_path=database sslmode=disable\",\"Version\":3}}"
+  }
+}

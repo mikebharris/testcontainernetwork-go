@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	_ "github.com/lib/pq"
 	"io"
 	"log"
@@ -25,7 +26,7 @@ func main() {
 		message.sendToSqsQueue(os.Getenv("SQS_QUEUE_NAME"))
 		message.sendToSnsTopic(os.Getenv("SNS_TOPIC_ARN"))
 		message.writeToDynamoDbTable(os.Getenv("DYNAMODB_TABLE_NAME"))
-		message.writeToDatabase()
+		message.writeToDatabase(getDbUrl())
 		return nil
 	})
 }
@@ -68,7 +69,7 @@ func (m message) writeToDynamoDbTable(table string) {
 	}
 }
 
-func (m message) writeToDatabase() {
+func (m message) writeToDatabase(dbUrl string) {
 	statement := `insert into database.messages(message) values($1)`
 	log.Println("Writing to database using statement: ", statement)
 
@@ -78,7 +79,7 @@ func (m message) writeToDatabase() {
 	if err := json.Unmarshal([]byte(m), &message); err != nil {
 		log.Fatalf("unmarshalling %s: %v", m, err)
 	}
-	if _, err := databaseClient().Exec(statement, message.Message); err != nil {
+	if _, err := databaseClient(dbUrl).Exec(statement, message.Message); err != nil {
 		log.Fatalf("writing to database: %v", err)
 	}
 }
@@ -141,10 +142,33 @@ func dynamoDbClient() *dynamodb.Client {
 	})
 }
 
-func databaseClient() *sql.DB {
-	dbConx, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+func databaseClient(dbUrl string) *sql.DB {
+	dbConx, err := sql.Open("postgres", dbUrl)
 	if err != nil {
 		log.Fatalf("opening database connection: %v", err)
 	}
 	return dbConx
+}
+
+func getDbUrl() string {
+	response, err := parameterStoreClient().GetParameter(context.Background(), &ssm.GetParameterInput{
+		Name:           aws.String("/db-url"),
+		WithDecryption: aws.Bool(true)},
+	)
+	if err != nil {
+		panic(fmt.Errorf("getting SSM parameter %s: %v", "/db-url", err))
+	}
+
+	dbUrl := *response.Parameter.Value
+	return dbUrl
+}
+
+func parameterStoreClient() *ssm.Client {
+	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(os.Getenv("AWS_REGION")))
+	if err != nil {
+		log.Fatalf("loading config: %v", err)
+	}
+	return ssm.NewFromConfig(cfg, func(o *ssm.Options) {
+		o.BaseEndpoint = aws.String(os.Getenv("SSM_ENDPOINT"))
+	})
 }

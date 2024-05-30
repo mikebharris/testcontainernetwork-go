@@ -27,6 +27,8 @@ import (
 const (
 	wiremockHostname  = "wiremock"
 	wiremockPort      = 8080
+	ssmHostname       = "ssm"
+	ssmPort           = 8080
 	snsHostname       = "sns"
 	snsPort           = 9911
 	sqsHostname       = "sqs"
@@ -76,6 +78,7 @@ type steps struct {
 	networkOfDockerContainers NetworkOfDockerContainers
 	lambdaContainer           LambdaDockerContainer
 	wiremockContainer         WiremockDockerContainer
+	ssmContainer              WiremockDockerContainer
 	sqsContainer              SqsDockerContainer
 	snsContainer              SnsDockerContainer
 	dynamoDbContainer         DynamoDbDockerContainer
@@ -90,6 +93,14 @@ func (s *steps) startContainerNetwork() {
 			Hostname:     wiremockHostname,
 			Port:         wiremockPort,
 			JsonMappings: "test-assets/wiremock/mappings",
+		},
+	}
+
+	s.ssmContainer = WiremockDockerContainer{
+		Config: WiremockDockerContainerConfig{
+			Hostname:     ssmHostname,
+			Port:         ssmPort,
+			JsonMappings: "test-assets/ssm/mappings",
 		},
 	}
 
@@ -149,10 +160,7 @@ func (s *steps) startContainerNetwork() {
 				"DYNAMODB_HOSTNAME":   dynamoDbHostname,
 				"DYNAMODB_PORT":       strconv.Itoa(dynamoDbPort),
 				"DYNAMODB_TABLE_NAME": dynamoDbTableName,
-				"DATABASE_URL": fmt.Sprintf(
-					"host=%s port=%d user=%s password=%s dbname=%s search_path=%s sslmode=disable",
-					auroraHostname, auroraPort, "user", "password", "database", "database",
-				),
+				"SSM_ENDPOINT":        fmt.Sprintf("http://%s:%d", ssmHostname, ssmPort),
 			},
 		},
 	}
@@ -160,6 +168,7 @@ func (s *steps) startContainerNetwork() {
 	s.networkOfDockerContainers =
 		NetworkOfDockerContainers{}.
 			WithDockerContainer(&s.lambdaContainer).
+			WithDockerContainer(&s.ssmContainer).
 			WithDockerContainer(&s.wiremockContainer).
 			WithDockerContainer(&s.sqsContainer).
 			WithDockerContainer(&s.snsContainer).
@@ -170,6 +179,8 @@ func (s *steps) startContainerNetwork() {
 }
 
 func (s *steps) stopContainerNetwork() {
+	buffer, _ := s.lambdaContainer.Log()
+	log.Println("lambda log:", buffer.String())
 	if err := s.networkOfDockerContainers.Stop(); err != nil {
 		log.Fatalf("stopping docker containers: %v", err)
 	}
