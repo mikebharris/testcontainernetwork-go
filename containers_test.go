@@ -179,8 +179,6 @@ func (s *steps) startContainerNetwork() {
 }
 
 func (s *steps) stopContainerNetwork() {
-	buffer, _ := s.lambdaContainer.Log()
-	log.Println("lambda log:", buffer.String())
 	if err := s.networkOfDockerContainers.Stop(); err != nil {
 		log.Fatalf("stopping docker containers: %v", err)
 	}
