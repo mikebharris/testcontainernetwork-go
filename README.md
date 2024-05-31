@@ -3,7 +3,9 @@
 ![AI-generated test pyramid for gophers](doc/ai-test-pyramid.png)
 
 A set of helper types and methods to abstract out boilerplate code
-for writing integration- and system-level tests for AWS services using [testcontainers in Go](https://github.com/testcontainers/testcontainers-go). Currently supported are:
+for writing integration- and system-level tests for AWS services using [testcontainers in Go](https://github.com/testcontainers/testcontainers-go).  The tests are implemented using the Gherkin syntax and the [Godog](https://github.com/cucumber/godog) test runner. See the Cucumber feature file in [features](features) directory.
+
+Currently implemented are:
  
 * DynamoDbDockerContainer - a container for a DynamoDB data store
 * FlywayDockerContainer - a Flyway container for provisioning database containers
