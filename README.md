@@ -19,9 +19,9 @@ Currently implemented are:
 
 I am going to willfully paraphrase from Ham Vocke, who sums this up perfectly in [The Practical Test Pyramid](https://martinfowler.com/articles/practical-test-pyramid.html#IntegrationTests):
 
-_All non-trivial applications [in this case an AWS Lambda] will integrate with some other parts (databases, filesystems, network calls to other applications). When writing unit tests these are usually the parts you leave out in order to come up with better isolation and faster tests. Still, your application will interact with other parts and this needs to be tested. Integration Tests are there to help. They test the integration of your application with all the parts that live outside of your application.
+_"All non-trivial applications [in this case an AWS Lambda] will integrate with some other parts (databases, filesystems, network calls to other applications). When writing unit tests these are usually the parts you leave out in order to come up with better isolation and faster tests. Still, your application will interact with other parts and this needs to be tested. Integration Tests are there to help. They test the integration of your application with all the parts that live outside of your application._
 
-For your automated tests this means you don't just need to run your own application but also the component you're integrating with. If you're testing the integration with a database you need to run a database when running your tests. For testing that you can read files from a disk you need to save a file to your disk and load it in your integration test._
+_For your automated tests this means you don't just need to run your own application but also the component you're integrating with. If you're testing the integration with a database you need to run a database when running your tests. For testing that you can read files from a disk you need to save a file to your disk and load it in your integration test."_
 
 Referring to the test pyramid, integration tests sit in the middle, and the term _service tests_ is often used interchangeably:
 
