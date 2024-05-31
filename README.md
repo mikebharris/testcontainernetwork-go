@@ -27,7 +27,9 @@ Referring to the test pyramid, integration tests sit in the middle, and the term
 
 ![A typical test pyramid](doc/testpyramid.png)
 
-I go with that, we are generally testing a service's integration between itself and other external services, some of which we may have also written ourselves.  In this example, we have a single AWS Lambda service that interacts with a number of other AWS services and an external API service (non-AWS).  A diagram of the Lambda service under test probably indicates this the best:
+I go with that. 
+
+We are generally testing a service's integration between itself and other external services, some of which we may have also written ourselves.  In this example, we have a single AWS Lambda service that interacts with a number of other AWS services and an external API service (non-AWS).  A diagram of the Lambda service under test probably indicates this the best:
 
 ![The Lambda service under test](doc/service-under-test.svg)
 
