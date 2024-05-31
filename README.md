@@ -117,22 +117,22 @@ service, as well as the _MappedPort()_ method. For example:
 ```go
 
 type MyDockerContainerConfig struct {
-Hostname   string
-ConfigFile string
-Port       int
+    Hostname   string
+    ConfigFile string
+    Port       int
 }
 
 type MyDockerContainer struct {
-DockerContainer
-Config MyDockerContainerConfig
+    DockerContainer
+    Config MyDockerContainerConfig
 }
 
 func (c *MyDockerContainer) Stop(ctx context.Context) error {
-....
+    ....
 }
 
 func (c *LambdaDockerContainer) StartUsing(ctx context.Context, dockerNetwork *testcontainers.DockerNetwork) error {
-....
+    ....
 }
 
 ```
