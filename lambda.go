@@ -36,17 +36,17 @@ func (c *LambdaDockerContainer) StartUsing(ctx context.Context, dockerNetwork *t
 		},
 	}
 	var err error
-	c.dockerContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	c.testContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          false,
 	})
 	if err != nil {
 		return fmt.Errorf("creating container: %w", err)
 	}
-	if err = c.dockerContainer.CopyFileToContainer(ctx, c.Config.Executable, "/var/task/handler", 365); err != nil {
+	if err = c.testContainer.CopyFileToContainer(ctx, c.Config.Executable, "/var/task/handler", 365); err != nil {
 		return fmt.Errorf("copying binary to docker container: %v", err)
 	}
-	if err := c.dockerContainer.Start(ctx); err != nil {
+	if err := c.testContainer.Start(ctx); err != nil {
 		return fmt.Errorf("starting container: %w", err)
 	}
 	return nil
@@ -67,7 +67,7 @@ func (c *LambdaDockerContainer) setupEnvironment() map[string]string {
 }
 
 func (c *LambdaDockerContainer) Log() (*bytes.Buffer, error) {
-	logs, err := c.dockerContainer.Logs(context.Background())
+	logs, err := c.testContainer.Logs(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("getting Lambda logs: %w", err)
 	}

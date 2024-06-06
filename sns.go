@@ -34,25 +34,25 @@ func (c *SnsDockerContainer) StartUsing(ctx context.Context, dockerNetwork *test
 		},
 	}
 	var err error
-	if c.dockerContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	if c.testContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          false,
 	}); err != nil {
 		return fmt.Errorf("creating container: %w", err)
 	}
 
-	if err = c.dockerContainer.CopyFileToContainer(ctx, c.Config.ConfigFile, "/etc/sns/db.json", 365); err != nil {
+	if err = c.testContainer.CopyFileToContainer(ctx, c.Config.ConfigFile, "/etc/sns/db.json", 365); err != nil {
 		return fmt.Errorf("copying config file to docker container: %v", err)
 	}
 
-	if err := c.dockerContainer.Start(ctx); err != nil {
+	if err := c.testContainer.Start(ctx); err != nil {
 		return fmt.Errorf("starting container: %w", err)
 	}
 	return nil
 }
 
 func (c *SnsDockerContainer) GetMessage() (string, error) {
-	snsLog, err := c.dockerContainer.CopyFileFromContainer(context.Background(), "/tmp/sns.log")
+	snsLog, err := c.testContainer.CopyFileFromContainer(context.Background(), "/tmp/sns.log")
 	if err != nil {
 		return "", fmt.Errorf("copying log file from docker container: %w", err)
 	}

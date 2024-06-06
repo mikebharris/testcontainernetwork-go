@@ -31,14 +31,14 @@ func (c *DynamoDbDockerContainer) StartUsing(ctx context.Context, dockerNetwork 
 		Entrypoint: []string{"java", "-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"},
 	}
 	var err error
-	c.dockerContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	c.testContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          false,
 	})
 	if err != nil {
 		return fmt.Errorf("creating container: %w", err)
 	}
-	if err := c.dockerContainer.Start(ctx); err != nil {
+	if err := c.testContainer.Start(ctx); err != nil {
 		return fmt.Errorf("starting container: %w", err)
 	}
 	return nil

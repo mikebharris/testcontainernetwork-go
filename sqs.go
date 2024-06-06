@@ -32,18 +32,18 @@ func (c *SqsDockerContainer) StartUsing(ctx context.Context, dockerNetwork *test
 		},
 	}
 	var err error
-	if c.dockerContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+	if c.testContainer, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          false,
 	}); err != nil {
 		return fmt.Errorf("creating container: %w", err)
 	}
 
-	if err = c.dockerContainer.CopyFileToContainer(ctx, c.Config.ConfigFilePath, "/opt/elasticmq.conf", 365); err != nil {
+	if err = c.testContainer.CopyFileToContainer(ctx, c.Config.ConfigFilePath, "/opt/elasticmq.conf", 365); err != nil {
 		return fmt.Errorf("copying config file to docker container: %w", err)
 	}
 
-	if err := c.dockerContainer.Start(ctx); err != nil {
+	if err := c.testContainer.Start(ctx); err != nil {
 		return fmt.Errorf("starting container: %w", err)
 	}
 	return nil
