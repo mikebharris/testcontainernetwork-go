@@ -53,6 +53,7 @@ func TestDockerContainerNetwork(t *testing.T) {
 		},
 		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
 			ctx.Step(`^the Lambda is triggered$`, steps.theLambdaIsTriggered)
+			ctx.Step(`^the database credentials are read from the Secrets Manager$`, steps.theDatabaseCredentialsAreReadFromSSM)
 			ctx.Step(`^the external API endpoint is hit`, steps.theExternalApiEndpointIsHit)
 			ctx.Step(`^the Lambda writes the message to the log`, steps.theLambdaWritesTheMessageToTheLog)
 			ctx.Step(`^the Lambda writes a message to the SQS queue`, steps.theLambdaWritesTheMessageToTheSqsQueue)
@@ -236,6 +237,24 @@ func (s *steps) theLambdaIsTriggered() {
 }
 
 func (s *steps) theExternalApiEndpointIsHit() {
+	adminStatus, _ := s.externalApiContainer.GetAdminStatus()
+	var req WiremockAdminRequest
+	for _, request := range adminStatus.Requests {
+		if request.Request.AbsoluteUrl == fmt.Sprintf("http://%s:8080/", externalApiHostname) {
+			req = request
+			break
+		}
+	}
+	if req.Request.AbsoluteUrl == "" {
+		s.t.Errorf("unable to find matching call to the endpoint")
+		s.t.Fail()
+	}
+
+	assert.Equal(s.t, http.StatusOK, req.ResponseDefinition.Status)
+	assert.Equal(s.t, "GET", req.Request.Method)
+}
+
+func (s *steps) theDatabaseCredentialsAreReadFromSSM() {
 	adminStatus, _ := s.externalApiContainer.GetAdminStatus()
 	var req WiremockAdminRequest
 	for _, request := range adminStatus.Requests {

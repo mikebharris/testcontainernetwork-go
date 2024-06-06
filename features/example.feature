@@ -2,6 +2,7 @@ Feature: When called, the Lambda will hit the external API, fetch the message an
 
   Scenario: Fetch the message from the external API and write it to various destinations
     Given the Lambda is triggered
+    And the database credentials are read from the Secrets Manager
     Then the external API endpoint is hit
     And the Lambda writes the message to the log
     And the Lambda writes a message to the SQS queue
