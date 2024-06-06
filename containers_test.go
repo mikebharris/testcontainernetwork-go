@@ -25,20 +25,20 @@ import (
 )
 
 const (
-	wiremockHostname  = "wiremock"
-	wiremockPort      = 8080
-	ssmHostname       = "ssm"
-	ssmPort           = 8080
-	snsHostname       = "sns"
-	snsPort           = 9911
-	sqsHostname       = "sqs"
-	sqsPort           = 9324
-	sqsQueueName      = "sqs-queue"
-	dynamoDbHostname  = "dynamodb"
-	dynamoDbPort      = 8000
-	dynamoDbTableName = "table"
-	auroraHostname    = "aurora"
-	auroraPort        = 5432
+	externalApiHostname = "wiremock"
+	externalApiPort     = 8080
+	ssmHostname         = "ssm"
+	ssmPort             = 8080
+	snsHostname         = "sns"
+	snsPort             = 9911
+	sqsHostname         = "sqs"
+	sqsPort             = 9324
+	sqsQueueName        = "sqs-queue"
+	dynamoDbHostname    = "dynamodb"
+	dynamoDbPort        = 8000
+	dynamoDbTableName   = "table"
+	auroraHostname      = "aurora"
+	auroraPort          = 5432
 )
 
 func TestDockerContainerNetwork(t *testing.T) {
@@ -53,7 +53,7 @@ func TestDockerContainerNetwork(t *testing.T) {
 		},
 		ScenarioInitializer: func(ctx *godog.ScenarioContext) {
 			ctx.Step(`^the Lambda is triggered$`, steps.theLambdaIsTriggered)
-			ctx.Step(`^the Wiremock endpoint is hit`, steps.theWiremockEndpointIsHit)
+			ctx.Step(`^the external API endpoint is hit`, steps.theExternalApiEndpointIsHit)
 			ctx.Step(`^the Lambda writes the message to the log`, steps.theLambdaWritesTheMessageToTheLog)
 			ctx.Step(`^the Lambda writes a message to the SQS queue`, steps.theLambdaWritesTheMessageToTheSqsQueue)
 			ctx.Step(`^the Lambda sends a notification to the SNS topic`, steps.theLambdaSendsANotificationToTheSnsTopic)
@@ -77,7 +77,7 @@ func TestDockerContainerNetwork(t *testing.T) {
 type steps struct {
 	networkOfDockerContainers NetworkOfDockerContainers
 	lambdaContainer           LambdaDockerContainer
-	wiremockContainer         WiremockDockerContainer
+	externalApiContainer      WiremockDockerContainer
 	ssmContainer              WiremockDockerContainer
 	sqsContainer              SqsDockerContainer
 	snsContainer              SnsDockerContainer
@@ -88,10 +88,10 @@ type steps struct {
 }
 
 func (s *steps) startContainerNetwork() {
-	s.wiremockContainer = WiremockDockerContainer{
+	s.externalApiContainer = WiremockDockerContainer{
 		Config: WiremockDockerContainerConfig{
-			Hostname:     wiremockHostname,
-			Port:         wiremockPort,
+			Hostname:     externalApiHostname,
+			Port:         externalApiPort,
 			JsonMappings: "test-assets/wiremock/mappings",
 		},
 	}
@@ -152,7 +152,7 @@ func (s *steps) startContainerNetwork() {
 			Hostname:   "lambda",
 			Executable: "test-assets/lambda/main",
 			Environment: map[string]string{
-				"API_ENDPOINT":        fmt.Sprintf("http://%s:%d", wiremockHostname, wiremockPort),
+				"API_ENDPOINT":        fmt.Sprintf("http://%s:%d", externalApiHostname, externalApiPort),
 				"SQS_ENDPOINT":        fmt.Sprintf("http://%s:%d", sqsHostname, sqsPort),
 				"SQS_QUEUE_NAME":      sqsQueueName,
 				"SNS_ENDPOINT":        fmt.Sprintf("http://%s:%d", snsHostname, snsPort),
@@ -169,7 +169,7 @@ func (s *steps) startContainerNetwork() {
 		NetworkOfDockerContainers{}.
 			WithDockerContainer(&s.lambdaContainer).
 			WithDockerContainer(&s.ssmContainer).
-			WithDockerContainer(&s.wiremockContainer).
+			WithDockerContainer(&s.externalApiContainer).
 			WithDockerContainer(&s.sqsContainer).
 			WithDockerContainer(&s.snsContainer).
 			WithDockerContainer(&s.dynamoDbContainer).
@@ -235,11 +235,11 @@ func (s *steps) theLambdaIsTriggered() {
 	}
 }
 
-func (s *steps) theWiremockEndpointIsHit() {
-	adminStatus, _ := s.wiremockContainer.GetAdminStatus()
+func (s *steps) theExternalApiEndpointIsHit() {
+	adminStatus, _ := s.externalApiContainer.GetAdminStatus()
 	var req WiremockAdminRequest
 	for _, request := range adminStatus.Requests {
-		if request.Request.AbsoluteUrl == fmt.Sprintf("http://%s:8080/", wiremockHostname) {
+		if request.Request.AbsoluteUrl == fmt.Sprintf("http://%s:8080/", externalApiHostname) {
 			req = request
 			break
 		}
