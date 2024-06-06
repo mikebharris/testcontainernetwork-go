@@ -16,9 +16,9 @@ import (
 )
 
 type WiremockDockerContainerConfig struct {
-	JsonMappings string
-	Hostname     string
-	Port         int
+	Hostname        string
+	Port            int
+	ConfigFilesPath string
 }
 
 type WiremockDockerContainer struct {
@@ -45,7 +45,7 @@ func (c *WiremockDockerContainer) StartUsing(ctx context.Context, dockerNetwork 
 			config.Mounts = []mount.Mount{
 				{
 					Type:     mount.TypeBind,
-					Source:   path.Join(wd, c.Config.JsonMappings),
+					Source:   path.Join(wd, c.Config.ConfigFilesPath),
 					Target:   "/home/wiremock/mappings/",
 					ReadOnly: true,
 				},

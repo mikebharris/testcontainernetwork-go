@@ -8,9 +8,9 @@ import (
 )
 
 type SqsDockerContainerConfig struct {
-	Hostname       string
-	ConfigFilePath string
-	Port           int
+	Hostname   string
+	Port       int
+	ConfigFile string
 }
 
 type SqsDockerContainer struct {
@@ -39,7 +39,7 @@ func (c *SqsDockerContainer) StartUsing(ctx context.Context, dockerNetwork *test
 		return fmt.Errorf("creating container: %w", err)
 	}
 
-	if err = c.testContainer.CopyFileToContainer(ctx, c.Config.ConfigFilePath, "/opt/elasticmq.conf", 365); err != nil {
+	if err = c.testContainer.CopyFileToContainer(ctx, c.Config.ConfigFile, "/opt/elasticmq.conf", 365); err != nil {
 		return fmt.Errorf("copying config file to docker container: %w", err)
 	}
 

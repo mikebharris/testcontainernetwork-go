@@ -11,8 +11,8 @@ import (
 
 type SnsDockerContainerConfig struct {
 	Hostname   string
-	ConfigFile string
 	Port       int
+	ConfigFile string
 }
 
 type SnsDockerContainer struct {

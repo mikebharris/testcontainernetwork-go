@@ -10,8 +10,8 @@ import (
 
 type LambdaDockerContainerConfig struct {
 	Executable  string
-	Environment map[string]string
 	Hostname    string
+	Environment map[string]string
 }
 
 type LambdaDockerContainer struct {

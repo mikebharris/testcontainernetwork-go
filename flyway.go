@@ -9,10 +9,10 @@ import (
 )
 
 type FlywayDockerContainerConfig struct {
-	Hostname       string
-	Port           int
-	ConfigFilePath string
-	SqlFilePath    string
+	Hostname        string
+	Port            int
+	ConfigFilesPath string
+	SqlFilesPath    string
 }
 
 type FlywayDockerContainer struct {
@@ -32,13 +32,13 @@ func (c *FlywayDockerContainer) StartUsing(ctx context.Context, dockerNetwork *t
 			config.Mounts = []mount.Mount{
 				{
 					Type:     mount.TypeBind,
-					Source:   c.Config.SqlFilePath,
+					Source:   c.Config.SqlFilesPath,
 					Target:   "/flyway/sql",
 					ReadOnly: true,
 				},
 				{
 					Type:     mount.TypeBind,
-					Source:   c.Config.ConfigFilePath,
+					Source:   c.Config.ConfigFilesPath,
 					Target:   "/flyway/conf",
 					ReadOnly: true,
 				},

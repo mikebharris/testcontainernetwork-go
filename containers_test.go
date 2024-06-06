@@ -91,26 +91,26 @@ type steps struct {
 func (s *steps) startContainerNetwork() {
 	s.externalApiContainer = WiremockDockerContainer{
 		Config: WiremockDockerContainerConfig{
-			Hostname:     externalApiHostname,
-			Port:         externalApiPort,
-			JsonMappings: "test-assets/wiremock/mappings",
+			Hostname:        externalApiHostname,
+			Port:            externalApiPort,
+			ConfigFilesPath: "test-assets/wiremock/mappings",
 		},
 	}
 
 	s.ssmContainer = WiremockDockerContainer{
 		Config: WiremockDockerContainerConfig{
-			Hostname:     ssmHostname,
-			Port:         ssmPort,
-			JsonMappings: "test-assets/ssm/mappings",
+			Hostname:        ssmHostname,
+			Port:            ssmPort,
+			ConfigFilesPath: "test-assets/ssm/mappings",
 		},
 	}
 
 	wd, _ := os.Getwd()
 	s.sqsContainer = SqsDockerContainer{
 		Config: SqsDockerContainerConfig{
-			Hostname:       sqsHostname,
-			Port:           sqsPort,
-			ConfigFilePath: path.Join(wd, "test-assets/sqs/elasticmq.conf"),
+			Hostname:   sqsHostname,
+			Port:       sqsPort,
+			ConfigFile: path.Join(wd, "test-assets/sqs/elasticmq.conf"),
 		},
 	}
 	s.snsContainer = SnsDockerContainer{
@@ -142,9 +142,9 @@ func (s *steps) startContainerNetwork() {
 
 	s.flywayContainer = FlywayDockerContainer{
 		Config: FlywayDockerContainerConfig{
-			Hostname:       "flyway",
-			ConfigFilePath: path.Join(wd, "test-assets/postgres/flyway/conf"),
-			SqlFilePath:    path.Join(wd, "test-assets/postgres/flyway/sql"),
+			Hostname:        "flyway",
+			ConfigFilesPath: path.Join(wd, "test-assets/postgres/flyway/conf"),
+			SqlFilesPath:    path.Join(wd, "test-assets/postgres/flyway/sql"),
 		},
 	}
 
