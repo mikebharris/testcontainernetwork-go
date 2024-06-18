@@ -24,7 +24,7 @@ type DockerContainer struct {
 func (c *DockerContainer) MappedPort() int {
 	mappedPort, err := c.testContainer.MappedPort(context.Background(), nat.Port(fmt.Sprintf("%d/tcp", c.internalServicePort)))
 	if err != nil {
-		log.Fatalf("getting mapped port: %v", err)
+		log.Fatalf("getting mapped port for %d: %v", c.internalServicePort, err)
 	}
 	return mappedPort.Int()
 }
