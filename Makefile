@@ -2,7 +2,7 @@ export SHELL:=/bin/bash
 
 .PHONY: build
 build:
-	cd test-assets/lambda && GOOS=linux go build -o main .
+	cd test-assets/lambda && rm main && GOOS=linux CGO_ENABLED=0 go build -o main main.go
 
 .PHONY: test
 test: build
