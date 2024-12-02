@@ -2,22 +2,26 @@
 
 ![AI-generated test pyramid for gophers](doc/ai-test-pyramid.png)
 
-A set of helper types and methods to abstract out boilerplate code
+A _library_ of helper types and methods to abstract out boilerplate code
 for writing integration- and system-level tests for AWS services using [testcontainers in Go](https://github.com/testcontainers/testcontainers-go).  The tests are implemented using the Gherkin syntax and the [Godog](https://github.com/cucumber/godog) test runner. See the Cucumber feature file in [features](features) directory.
 
 Currently implemented are:
  
-* DynamoDbDockerContainer - a container for a DynamoDB data store
-* FlywayDockerContainer - a Flyway container for provisioning database containers
-* LambdaDockerContainer - a container that runs a Lambda function
-* PostgresDockerContainer - a container for an Postgres Database in AWS RDS
-* SnsDockerContainer - a container that runs an AWS Simple Notification Service server
-* SqsDockerContainer - a container that runs an AWS Simple Queue Service server
-* WiremockDockerContainer - a container that runs a Wiremock server, great for simulating external APIs and AWS's Systems Manager Parameter Store
+* __DynamoDbDockerContainer__ - a container for a DynamoDB data store
+* __FlywayDockerContainer__ - a Flyway container for provisioning database containers
+* __LambdaDockerContainer__ - a container that runs a Lambda function
+* __PostgresDockerContainer__ - a container for an Postgres Database in AWS RDS
+* __SnsDockerContainer__ - a container that runs an AWS Simple Notification Service server
+* __SqsDockerContainer__ - a container that runs an AWS Simple Queue Service server
+* __WiremockDockerContainer__ - a container that runs a Wiremock server, great for simulating external APIs and AWS's Systems Manager Parameter Store
+
+I presented this library to the [Golang Oxford MeetUp](https://www.meetup.com/Golang-Oxford) group on [5th June 2024](https://www.meetup.com/golang-oxford/events/300287783) to pretty positive feedback from the attendees.  One attendee did query why I created this rather than just using Dockerfiles.  The following is my rationale.
 
 ## Rationale
 
-I am going to willfully paraphrase from Ham Vocke, who sums this up perfectly in [The Practical Test Pyramid](https://martinfowler.com/articles/practical-test-pyramid.html#IntegrationTests):
+I wanted to have a test-driven way of working with the containers and writing the code and this is why I created this library.  I also wanted a little Go project to get my teeth into and show my coding style and I was keen for this project to have a real use, a real purpose.  But it was a good point that the attendee made, but there are many ways to skin the proverbial cat, and this is one of them.  It may not be subjectively the _best_ and certainly might be more complex than some others. 
+
+I am going to willfully paraphrase from Ham Vocke, who sums up perfectly why I wanted to create this library in [The Practical Test Pyramid](https://martinfowler.com/articles/practical-test-pyramid.html#IntegrationTests):
 
 _"All non-trivial applications [in this case an AWS Lambda] will integrate with some other parts (databases, filesystems, network calls to other applications). When writing unit tests these are usually the parts you leave out in order to come up with better isolation and faster tests. Still, your application will interact with other parts and this needs to be tested. Integration Tests are there to help. They test the integration of your application with all the parts that live outside of your application._
 
@@ -52,6 +56,8 @@ make test
 The tests can also be run directly from within an IDE, such as GoLand, by running the func _TestDockerContainerNetwork_ in [containers_test.go](containers_test.go).
 
 ## Using
+
+I have _playground_ project that makes extensive use of this library for running it's tests.  See [CLAMS](https://github.com/mikebharris/CLAMS) for some relatively real-world, realistic examples of its use.
 
 ```go
 package main
